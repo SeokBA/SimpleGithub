@@ -1,0 +1,48 @@
+apply plugin: 'com.android.application'
+
+android {
+    // dependencies.gradle 내 정의된 값을 참조합니다.
+    compileSdkVersion rootProject.ext.compileSdkVersion
+    buildToolsVersion rootProject.ext.buildToolsVersion
+
+    defaultConfig {
+        applicationId "com.androidhuman.example.simplegithub"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+
+        // 그래들 프로퍼티에 정의된 값을 BuildConfig 내 필드로 변환해줍니다.
+        // 프로퍼티가 정의되어 있지 않다면 "NOT_FOUND" 값이 BuildConfig 내 필드에 대입됩니다.
+        buildConfigField "String", "GITHUB_CLIENT_ID",
+                rootProject.properties["GITHUB_CLIENT_ID"] ?: "\"NOT_FOUND\""
+
+        buildConfigField "String", "GITHUB_CLIENT_SECRET",
+                rootProject.properties["GITHUB_CLIENT_SECRET"] ?: "\"NOT_FOUND\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+dependencies {
+    implementation "com.android.support:appcompat-v7:$supportLibVersion"
+    implementation "com.android.support:customtabs:$supportLibVersion"
+    implementation "com.android.support:design:$supportLibVersion"
+    implementation "com.android.support:recyclerview-v7:$supportLibVersion"
+    implementation "com.github.bumptech.glide:glide:$glideVersion"
+    implementation "com.google.code.gson:gson:$gsonVersion"
+    implementation "com.squareup.okhttp3:logging-interceptor:$okHttpVersion"
+    implementation "com.squareup.okhttp3:okhttp:$okHttpVersion"
+    implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
+    implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
+
+    // Glide 4.0의 Generated API를 위해 필요합니다.
+    // 자세한 사항은 뒷 부분의 'UI 표시부 구성'을 참조하세요.
+    // Glide 어노테이션 컴파일러가 의존성에 추가되어 있습니다.
+    annotationProcessor "com.github.bumptech.glide:compiler:$glideVersion"
+}
