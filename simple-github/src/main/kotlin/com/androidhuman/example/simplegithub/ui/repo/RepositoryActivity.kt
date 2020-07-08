@@ -3,15 +3,12 @@ package com.androidhuman.example.simplegithub.ui.repo
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import android.view.View
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.ProgressBar
-import android.widget.TextView
 import com.androidhuman.example.simplegithub.R
-import com.androidhuman.example.simplegithub.api.GithubApi
-import com.androidhuman.example.simplegithub.api.GithubApiProvider
 import com.androidhuman.example.simplegithub.api.model.GithubRepo
+import com.androidhuman.example.simplegithub.api.provideGithubApi
 import com.androidhuman.example.simplegithub.ui.GlideApp
+// 코틀린 안드로이드 익스텐션에서 activity_repository 레이아웃을 사용합니다.
+import kotlinx.android.synthetic.main.activity_repository.*
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -21,54 +18,32 @@ import java.util.Locale
 
 class RepositoryActivity : AppCompatActivity() {
 
-    // 프로퍼티에 lateinit을 추가합니다.
-    internal lateinit var llContent: LinearLayout
+    // 클래스 내 동반 객체의 정의부를 가장 위로 옮겨줍니다.
+    companion object {
 
-    internal lateinit var ivProfile: ImageView
+        // const 키워드를 추가합니다.
+        const val KEY_USER_LOGIN = "user_login"
 
-    internal lateinit var tvName: TextView
+        // const 키워드를 추가합니다.
+        const val KEY_REPO_NAME = "repo_name"
+    }
 
-    internal lateinit var tvStars: TextView
+    // Lazy 프로퍼티로 전환합니다.
+    internal val api by lazy { provideGithubApi(this) }
 
-    internal lateinit var tvDescription: TextView
+    // 널 값을 허용하도록 한 후, 초깃값을 명시적으로 null로 지정합니다.
+    internal var repoCall: Call<GithubRepo>? = null
 
-    internal lateinit var tvLanguage: TextView
-
-    internal lateinit var tvLastUpdate: TextView
-
-    internal lateinit var pbProgress: ProgressBar
-
-    internal lateinit var tvMessage: TextView
-
-    internal lateinit var api: GithubApi
-
-    internal lateinit var repoCall: Call<GithubRepo>
-
-    internal var dateFormatInResponse = SimpleDateFormat(
+    internal val dateFormatInResponse = SimpleDateFormat(
             "yyyy-MM-dd'T'HH:mm:ssX", Locale.getDefault())
 
-    internal var dateFormatToShow = SimpleDateFormat(
+    internal val dateFormatToShow = SimpleDateFormat(
             "yyyy-MM-dd HH:mm:ss", Locale.getDefault())
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_repository)
 
-        llContent = findViewById(R.id.llActivityRepositoryContent)
-        ivProfile = findViewById(R.id.ivActivityRepositoryProfile)
-        tvName = findViewById(R.id.tvActivityRepositoryName)
-        tvStars = findViewById(R.id.tvActivityRepositoryStars)
-        tvDescription = findViewById(R.id.tvActivityRepositoryDescription)
-        tvLanguage = findViewById(R.id.tvActivityRepositoryLanguage)
-        tvLastUpdate = findViewById(R.id.tvActivityRepositoryLastUpdate)
-        pbProgress = findViewById(R.id.pbActivityRepository)
-        tvMessage = findViewById(R.id.tvActivityRepositoryMessage)
-
-        api = GithubApiProvider.provideGithubApi(this)
-
-        // 엘비스 연산자를 사용하여 널 값을 검사합니다.
-        // KEY_USER_LOGIN 이름으로 문자열 값 포함되어 있지 않다면
-        // IllegalArgumentException 예외를 발생시킵니다.
         val login = intent.getStringExtra(KEY_USER_LOGIN) ?: throw IllegalArgumentException(
                 "No login info exists in extras")
         val repo = intent.getStringExtra(KEY_REPO_NAME) ?: throw IllegalArgumentException(
@@ -77,13 +52,21 @@ class RepositoryActivity : AppCompatActivity() {
         showRepositoryInfo(login, repo)
     }
 
+    override fun onStop() {
+        super.onStop()
+        // 액티비티가 화면에서 사라지는 시점에 API 호출 객체가 생성되어 있다면
+        // API 요청을 취소합니다.
+        repoCall?.run { cancel() }
+    }
+
     private fun showRepositoryInfo(login: String, repoName: String) {
         showProgress()
 
+        // 앞에서 API 호출에 필요한 객체를 받았으므로,
+        // 이 시점에서 accessTokenCall 객체의 값은 널이 아닙니다.
+        // 따라서 비 널 값 보증(!!)을 사용하여 이 객체를 사용합니다.
         repoCall = api.getRepository(login, repoName)
-
-        // Call 인터페이스를 구현하는 익명 클래스의 인스턴스를 생성합니다.
-        repoCall.enqueue(object : Callback<GithubRepo> {
+        repoCall!!.enqueue(object : Callback<GithubRepo> {
             override fun onResponse(call: Call<GithubRepo>, response: Response<GithubRepo>) {
                 hideProgress(true)
 
@@ -91,27 +74,28 @@ class RepositoryActivity : AppCompatActivity() {
                 if (response.isSuccessful && null != repo) {
                     GlideApp.with(this@RepositoryActivity)
                             .load(repo.owner.avatarUrl)
-                            .into(ivProfile)
+                            // 인스턴스 선언 없이 뷰 ID를 사용하여 인스턴스에 접근합니다.
+                            .into(ivActivityRepositoryProfile)
 
-                    tvName.text = repo.fullName
-                    tvStars.text = resources
+                    tvActivityRepositoryName.text = repo.fullName
+                    tvActivityRepositoryStars.text = resources
                             .getQuantityString(R.plurals.star, repo.stars, repo.stars)
                     if (null == repo.description) {
-                        tvDescription.setText(R.string.no_description_provided)
+                        tvActivityRepositoryDescription.setText(R.string.no_description_provided)
                     } else {
-                        tvDescription.text = repo.description
+                        tvActivityRepositoryDescription.text = repo.description
                     }
                     if (null == repo.language) {
-                        tvLanguage.setText(R.string.no_language_specified)
+                        tvActivityRepositoryLanguage.setText(R.string.no_language_specified)
                     } else {
-                        tvLanguage.text = repo.language
+                        tvActivityRepositoryLanguage.text = repo.language
                     }
 
                     try {
                         val lastUpdate = dateFormatInResponse.parse(repo.updatedAt)
-                        tvLastUpdate.text = dateFormatToShow.format(lastUpdate)
+                        tvActivityRepositoryLastUpdate.text = dateFormatToShow.format(lastUpdate)
                     } catch (e: ParseException) {
-                        tvLastUpdate.text = getString(R.string.unknown)
+                        tvActivityRepositoryLastUpdate.text = getString(R.string.unknown)
                     }
 
                 } else {
@@ -127,25 +111,21 @@ class RepositoryActivity : AppCompatActivity() {
     }
 
     private fun showProgress() {
-        llContent.visibility = View.GONE
-        pbProgress.visibility = View.VISIBLE
+        llActivityRepositoryContent.visibility = View.GONE
+        pbActivityRepository.visibility = View.VISIBLE
     }
 
     private fun hideProgress(isSucceed: Boolean) {
-        llContent.visibility = if (isSucceed) View.VISIBLE else View.GONE
-        pbProgress.visibility = View.GONE
+        llActivityRepositoryContent.visibility = if (isSucceed) View.VISIBLE else View.GONE
+        pbActivityRepository.visibility = View.GONE
     }
 
     private fun showError(message: String?) {
-        tvMessage.text = message ?: "Unexpected error."
-        tvMessage.visibility = View.VISIBLE
-    }
-
-    // 정적 필드로 정의되어 있던 항목은 동반 객체 내부에 정의됩니다.
-    companion object {
-
-        val KEY_USER_LOGIN = "user_login"
-
-        val KEY_REPO_NAME = "repo_name"
+        // with() 함수를 사용하여
+        // tvActivityRepositoryMessage 범위 내에서 작업을 수행합니다.
+        with(tvActivityRepositoryMessage) {
+            text = message ?: "Unexpected error."
+            visibility = View.VISIBLE
+        }
     }
 }

@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 // 코틀린 안드로이드 플러그인을 적용합니다
 apply plugin: 'kotlin-android'
 
+// 코틀린 안드로이드 익스텐션 플러그인을 적용합니다.
+apply plugin: 'kotlin-android-extensions'
+
 // 코틀린 코드에서 어노테이션 프로세싱을 사용할 수 있도록 kotlin-kapt 플러그인을 추가로 적용합니다.
 apply plugin: 'kotlin-kapt'
 
@@ -51,6 +54,9 @@ dependencies {
     implementation "com.squareup.okhttp3:okhttp:$okHttpVersion"
     implementation "com.squareup.retrofit2:converter-gson:$retrofitVersion"
     implementation "com.squareup.retrofit2:retrofit:$retrofitVersion"
+
+    // Anko Commons 라이브러리를 의존성에 추가합니다.
+    implementation "org.jetbrains.anko:anko-commons:$ankoVersion"
 
     // Glide 4.0의 Generated API를 위해 필요합니다.
     // 자세한 사항은 뒷 부분의 'UI 표시부 구성'을 참조하세요.
